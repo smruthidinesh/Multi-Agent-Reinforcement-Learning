@@ -6,6 +6,7 @@ Basic tests for the multi-agent RL framework.
 import sys
 import os
 from pathlib import Path
+import numpy as np
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))

@@ -127,11 +127,11 @@ class DQNAgent(BaseAgent):
             batch = random.sample(self.buffer, self.batch_size)
         
         # Convert to tensors
-        observations = torch.FloatTensor([exp['observation'] for exp in batch]).to(self.device)
-        actions = torch.LongTensor([exp['action'] for exp in batch]).to(self.device)
-        rewards = torch.FloatTensor([exp['reward'] for exp in batch]).to(self.device)
-        next_observations = torch.FloatTensor([exp['next_observation'] for exp in batch]).to(self.device)
-        dones = torch.BoolTensor([exp['done'] for exp in batch]).to(self.device)
+        observations = torch.FloatTensor(np.array([exp['observation'] for exp in batch])).to(self.device)
+        actions = torch.LongTensor(np.array([exp['action'] for exp in batch])).to(self.device)
+        rewards = torch.FloatTensor(np.array([exp['reward'] for exp in batch])).to(self.device)
+        next_observations = torch.FloatTensor(np.array([exp['next_observation'] for exp in batch])).to(self.device)
+        dones = torch.BoolTensor(np.array([exp['done'] for exp in batch])).to(self.device)
         
         # Current Q-values
         current_q_values = self.q_network(observations).gather(1, actions.unsqueeze(1))
