@@ -121,16 +121,16 @@ def main():
     
     # Environment arguments
     parser.add_argument('--env', type=str, default='grid_world',
-                       choices=['grid_world', 'cooperative_navigation', 'predator_prey'],
-                       help='Environment type')
+                    choices=['grid_world', 'cooperative_navigation', 'predator_prey'],
+                    help='Environment type')
     parser.add_argument('--n-agents', type=int, default=2, help='Number of agents')
     parser.add_argument('--grid-size', type=int, nargs=2, default=[10, 10],
-                       help='Grid size for grid world environment')
+                    help='Grid size for grid world environment')
     
     # Algorithm arguments
     parser.add_argument('--algorithm', type=str, default='independent_q_learning',
-                       choices=['independent_q_learning', 'maddpg', 'mappo'],
-                       help='Algorithm type')
+                    choices=['independent_q_learning', 'maddpg', 'mappo'],
+                    help='Algorithm type')
     parser.add_argument('--learning-rate', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor')
     parser.add_argument('--epsilon', type=float, default=1.0, help='Initial epsilon for exploration')
@@ -151,7 +151,7 @@ def main():
     
     # Device arguments
     parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'],
-                       help='Device to use for training')
+                    help='Device to use for training')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     
     # Config file

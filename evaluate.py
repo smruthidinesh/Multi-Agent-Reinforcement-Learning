@@ -124,16 +124,16 @@ def main():
     # Model arguments
     parser.add_argument('--model-path', type=str, required=True, help='Path to trained model')
     parser.add_argument('--algorithm', type=str, required=True,
-                       choices=['independent_q_learning', 'maddpg', 'mappo'],
-                       help='Algorithm type')
+                    choices=['independent_q_learning', 'maddpg', 'mappo'],
+                    help='Algorithm type')
     
     # Environment arguments
     parser.add_argument('--env', type=str, default='grid_world',
-                       choices=['grid_world', 'cooperative_navigation', 'predator_prey'],
-                       help='Environment type')
+                    choices=['grid_world', 'cooperative_navigation', 'predator_prey'],
+                    help='Environment type')
     parser.add_argument('--n-agents', type=int, default=2, help='Number of agents')
     parser.add_argument('--grid-size', type=int, nargs=2, default=[10, 10],
-                       help='Grid size for grid world environment')
+                    help='Grid size for grid world environment')
     
     # Evaluation arguments
     parser.add_argument('--episodes', type=int, default=10, help='Number of evaluation episodes')
@@ -147,7 +147,7 @@ def main():
     
     # Device arguments
     parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'],
-                       help='Device to use for evaluation')
+                    help='Device to use for evaluation')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     
     args = parser.parse_args()

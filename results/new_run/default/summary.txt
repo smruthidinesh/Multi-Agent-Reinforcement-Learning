@@ -1,0 +1,11 @@
+Training Summary for independent_q_learning
+=====================================
+
+Total Episodes: 1000
+Final Average Reward: 7.20
+Final Average Length: 98.01
+
+Best Episode Reward: 29.84
+Worst Episode Reward: -12.40
+
+Training completed at: 2025-11-01 22:41:25
