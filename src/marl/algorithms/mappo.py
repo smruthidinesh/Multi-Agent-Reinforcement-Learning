@@ -36,6 +36,7 @@ class ActorNetwork(nn.Module):
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         logits = self.network(x)
+        logits = torch.clamp(logits, -10, 10)
         return F.softmax(logits, dim=-1)
 
 
@@ -360,6 +361,7 @@ class MAPPO:
         
         episode_rewards = []
         episode_lengths = []
+        successes = []
         
         for episode in range(n_episodes):
             episode_reward = 0
@@ -390,12 +392,14 @@ class MAPPO:
             
             episode_rewards.append(episode_reward)
             episode_lengths.append(episode_length)
+            successes.append(len(self.env.collected_targets) == self.env.n_targets)
         
         return {
             "avg_reward": np.mean(episode_rewards),
             "std_reward": np.std(episode_rewards),
             "avg_length": np.mean(episode_lengths),
-            "std_length": np.std(episode_lengths)
+            "std_length": np.std(episode_lengths),
+            "success_rate": np.mean(successes)
         }
     
     def save_models(self, filepath: str) -> None:

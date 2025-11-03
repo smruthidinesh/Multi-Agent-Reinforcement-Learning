@@ -6,7 +6,8 @@ setup(
     description="A comprehensive multi-agent reinforcement learning framework",
     author="Your Name",
     author_email="your.email@example.com",
-    packages=find_packages(),
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
     install_requires=[
         "torch>=2.0.0",
         "numpy>=1.21.0",
@@ -21,6 +22,7 @@ setup(
         "plotly>=5.10.0",
         "jupyter>=1.0.0",
         "ipywidgets>=8.0.0",
+        "flask>=2.0.0",
     ],
     python_requires=">=3.8",
     classifiers=[

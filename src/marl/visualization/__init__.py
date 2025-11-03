@@ -6,7 +6,9 @@ agent behavior, training progress, and environment dynamics.
 """
 
 from .training_plots import *
+from .web_server import run_web_server
 
 __all__ = [
-    'TrainingPlots'
+    'TrainingPlots',
+    'run_web_server'
 ]

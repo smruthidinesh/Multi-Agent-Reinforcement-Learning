@@ -158,8 +158,8 @@ def main():
         # Select actions
         actions = {}
         for agent_id, obs in observations.items():
-            if hasattr(best_algorithm_obj.agents[agent_id], 'select_action'):
-                action = best_algorithm_obj.agents[agent_id].select_action(obs, training=False)
+            if hasattr(best_algorithm_obj.agents[agent_id], 'get_action'):
+                action = best_algorithm_obj.agents[agent_id].get_action(obs, training=False)
             else:
                 # For MAPPO
                 action, _, _ = best_algorithm_obj.agents[agent_id].select_action(obs, training=False)

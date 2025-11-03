@@ -100,7 +100,7 @@ def main():
         # Select actions
         actions = {}
         for agent_id, obs in observations.items():
-            action = algorithm.agents[agent_id].select_action(obs, training=False)
+            action = algorithm.agents[agent_id].get_action(obs, training=False)
             actions[agent_id] = action
         
         # Execute actions

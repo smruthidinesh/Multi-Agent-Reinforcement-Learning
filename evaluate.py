@@ -223,7 +223,7 @@ def main():
     
     # Save evaluation results
     results_file = output_dir / 'evaluation_results.json'
-    EvaluationUtils.save_training_results(eval_results, str(results_file))
+    # EvaluationUtils.save_evaluation_results(eval_results, str(results_file))
     print(f"Saved evaluation results to {results_file}")
     
     # Generate plots

@@ -16,11 +16,11 @@ from .base_agent import BaseAgent
 class PolicyNetwork(nn.Module):
     """Policy network for policy gradient methods."""
     
-    def __init__(self, input_dim: int, output_dim: int, hidden_dims: list = [128, 128]):
+    def __init__(self, input_dim: int, output_dim: int, message_dim: int = 0, hidden_dims: list = [128, 128]):
         super().__init__()
         
         layers = []
-        prev_dim = input_dim
+        prev_dim = input_dim + message_dim
         
         for hidden_dim in hidden_dims:
             layers.extend([
@@ -33,7 +33,9 @@ class PolicyNetwork(nn.Module):
         
         self.network = nn.Sequential(*layers)
     
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, messages: Optional[torch.Tensor] = None) -> torch.Tensor:
+        if messages is not None:
+            x = torch.cat([x, messages], dim=-1)
         logits = self.network(x)
         return F.softmax(logits, dim=-1)
 
@@ -52,9 +54,11 @@ class PolicyGradientAgent(BaseAgent):
         action_space: Any,
         learning_rate: float = 0.001,
         gamma: float = 0.99,
-        device: str = "cpu"
+        device: str = "cpu",
+        communication_channel: Optional[Any] = None,
+        message_dim: int = 0
     ):
-        super().__init__(agent_id, observation_space, action_space, learning_rate, device)
+        super().__init__(agent_id, observation_space, action_space, learning_rate, device, communication_channel, message_dim)
         
         self.gamma = gamma
         
@@ -63,7 +67,7 @@ class PolicyGradientAgent(BaseAgent):
         self.output_dim = action_space.n if hasattr(action_space, 'n') else action_space.shape[0]
         
         # Policy network
-        self.policy_network = PolicyNetwork(self.input_dim, self.output_dim).to(device)
+        self.policy_network = PolicyNetwork(self.input_dim, self.output_dim, self.message_dim).to(device)
         self.optimizer = optim.Adam(self.policy_network.parameters(), lr=learning_rate)
         
         # Episode storage
@@ -74,11 +78,13 @@ class PolicyGradientAgent(BaseAgent):
         # Training mode
         self.training = True
         
-    def select_action(self, observation: np.ndarray, training: bool = True) -> int:
+    def get_action(self, observation: np.ndarray, messages: Optional[torch.Tensor] = None, training: bool = True) -> int:
         """Select action using policy network."""
         with torch.no_grad():
             obs_tensor = torch.FloatTensor(observation).unsqueeze(0).to(self.device)
-            action_probs = self.policy_network(obs_tensor)
+            if messages is not None:
+                messages = messages.unsqueeze(0).to(self.device)
+            action_probs = self.policy_network(obs_tensor, messages)
             
             if training and self.training:
                 # Sample from policy

@@ -1,0 +1,16 @@
+Evaluation Report for independent_q_learning
+=====================================
+
+Evaluation Episodes: 100
+Average Episode Reward: 1.83 ± 6.60
+Average Episode Length: 99.06 ± 9.35
+Success Rate: 1.00%
+
+Agent Performance:
+  Agent 0: 1.07 ± 4.35
+  Agent 1: 0.77 ± 4.61
+
+Best Episode Reward: 29.88
+Worst Episode Reward: -20.20
+Longest Episode: 100
+Shortest Episode: 6

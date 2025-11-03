@@ -18,11 +18,11 @@ from .base_agent import BaseAgent
 class DQNNetwork(nn.Module):
     """Deep Q-Network architecture."""
     
-    def __init__(self, input_dim: int, output_dim: int, hidden_dims: list = [128, 128]):
+    def __init__(self, input_dim: int, output_dim: int, message_dim: int = 0, hidden_dims: list = [128, 128]):
         super().__init__()
         
         layers = []
-        prev_dim = input_dim
+        prev_dim = input_dim + message_dim
         
         for hidden_dim in hidden_dims:
             layers.extend([
@@ -35,7 +35,9 @@ class DQNNetwork(nn.Module):
         
         self.network = nn.Sequential(*layers)
     
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, messages: Optional[torch.Tensor] = None) -> torch.Tensor:
+        if messages is not None:
+            x = torch.cat([x, messages], dim=-1)
         return self.network(x)
 
 
@@ -47,10 +49,11 @@ class DQNAgent(BaseAgent):
     """
     
     def __init__(
-        self,
-        agent_id: int,
-        observation_space: Any,
-        action_space: Any,
+        self, 
+        agent_id: int, 
+        observation_space: Any, 
+        action_space: Any, 
+        is_high_level: bool = False, 
         learning_rate: float = 0.001,
         gamma: float = 0.99,
         epsilon: float = 1.0,
@@ -59,9 +62,12 @@ class DQNAgent(BaseAgent):
         buffer_size: int = 10000,
         batch_size: int = 32,
         target_update_freq: int = 100,
-        device: str = "cpu"
+        device: str = "cpu",
+        communication_channel: Optional[Any] = None,
+        message_dim: int = 0,
+        input_dim_override: Optional[int] = None
     ):
-        super().__init__(agent_id, observation_space, action_space, learning_rate, device)
+        super().__init__(agent_id, observation_space, action_space, learning_rate, device, communication_channel, message_dim)
         
         self.gamma = gamma
         self.epsilon = epsilon
@@ -75,8 +81,9 @@ class DQNAgent(BaseAgent):
         self.output_dim = action_space.n if hasattr(action_space, 'n') else action_space.shape[0]
         
         # Networks
-        self.q_network = DQNNetwork(self.input_dim, self.output_dim).to(device)
-        self.target_network = DQNNetwork(self.input_dim, self.output_dim).to(device)
+        input_dim = input_dim_override if input_dim_override is not None else self.input_dim
+        self.q_network = DQNNetwork(input_dim, self.output_dim, self.message_dim).to(device)
+        self.target_network = DQNNetwork(input_dim, self.output_dim, self.message_dim).to(device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
         
         # Copy weights to target network
@@ -87,18 +94,28 @@ class DQNAgent(BaseAgent):
         
         # Training mode
         self.training = True
+        self.last_goal = -1
         
-    def select_action(self, observation: np.ndarray, training: bool = True) -> int:
+    def get_action(self, observation: np.ndarray, messages: Optional[torch.Tensor] = None, training: bool = True) -> int:
         """Select action using epsilon-greedy policy."""
         if training and self.training and random.random() < self.epsilon:
             return random.randint(0, self.output_dim - 1)
         
         with torch.no_grad():
             obs_tensor = torch.FloatTensor(observation).unsqueeze(0).to(self.device)
-            q_values = self.q_network(obs_tensor)
+            if messages is not None:
+                messages = messages.unsqueeze(0).to(self.device)
+            q_values = self.q_network(obs_tensor, messages)
             action = q_values.argmax().item()
         
         return action
+
+    def get_goal(self, observation: np.ndarray, messages: Optional[torch.Tensor] = None, training: bool = True) -> int:
+        """Select a goal using the high-level policy."""
+        goal = random.randint(0, self.output_dim - 1)
+        self.last_goal = goal
+        return goal
+
     
     def store_experience(
         self, 

@@ -34,7 +34,7 @@ class EvaluationUtils:
                 if hasattr(agents[agent_id], 'select_action'):
                     action = agents[agent_id].select_action(obs, training=False)
                 else:
-                    action = agents[agent_id](obs)
+                    action = agents[agent_id].get_action(obs)
                 actions[agent_id] = action
             
             # Execute actions

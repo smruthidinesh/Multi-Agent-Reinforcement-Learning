@@ -31,11 +31,13 @@ class IndependentQLearning:
         buffer_size: int = 10000,
         batch_size: int = 32,
         target_update_freq: int = 100,
-        device: str = "cpu"
+        device: str = "cpu",
+        message_dim: int = 0
     ):
         self.env = env
         self.n_agents = n_agents
         self.device = device
+        self.message_dim = message_dim
         
         # Create agents
         self.agents = {}
@@ -52,7 +54,9 @@ class IndependentQLearning:
                 buffer_size=buffer_size,
                 batch_size=batch_size,
                 target_update_freq=target_update_freq,
-                device=device
+                device=device,
+                communication_channel=env.communication_channel if hasattr(env, 'communication_channel') else None,
+                message_dim=message_dim
             )
         
         # Training statistics
@@ -72,14 +76,29 @@ class IndependentQLearning:
             observations, _ = self.env.reset()
             
             for step in range(max_steps_per_episode):
+                # Get messages from other agents
+                messages = {}
+                if self.message_dim > 0:
+                    for agent_id in range(self.n_agents):
+                        messages[agent_id] = self.agents[agent_id].get_messages()
+
                 # Select actions
                 actions = {}
                 for agent_id, obs in observations.items():
-                    action = self.agents[agent_id].select_action(obs, training=True)
+                    action = self.agents[agent_id].get_action(obs, messages.get(agent_id), training=True)
                     actions[agent_id] = action
+
+                # Generate messages to send
+                new_messages = {}
+                if self.message_dim > 0:
+                    for agent_id, obs in observations.items():
+                        # For simplicity, agents send their observation as a message
+                        # A more sophisticated approach would be to learn what to send
+                        message = torch.FloatTensor(obs[:self.message_dim])
+                        new_messages[agent_id] = message
                 
                 # Execute actions
-                next_observations, rewards, terminated, truncated, _ = self.env.step(actions)
+                next_observations, rewards, terminated, truncated, _ = self.env.step(actions, new_messages)
                 
                 # Store experiences
                 for agent_id in range(self.n_agents):
@@ -136,6 +155,7 @@ class IndependentQLearning:
         episode_lengths = []
         agent_rewards = {agent_id: [] for agent_id in range(self.n_agents)}
         
+        successes = []
         for episode in range(n_episodes):
             episode_reward = 0
             episode_length = 0
@@ -145,14 +165,27 @@ class IndependentQLearning:
             observations, _ = self.env.reset()
             
             for step in range(max_steps_per_episode):
+                # Get messages from other agents
+                messages = {}
+                if self.message_dim > 0:
+                    for agent_id in range(self.n_agents):
+                        messages[agent_id] = self.agents[agent_id].get_messages()
+
                 # Select actions (greedy)
                 actions = {}
                 for agent_id, obs in observations.items():
-                    action = self.agents[agent_id].select_action(obs, training=False)
+                    action = self.agents[agent_id].get_action(obs, messages.get(agent_id), training=False)
                     actions[agent_id] = action
+
+                # Generate messages to send
+                new_messages = {}
+                if self.message_dim > 0:
+                    for agent_id, obs in observations.items():
+                        message = torch.FloatTensor(obs[:self.message_dim])
+                        new_messages[agent_id] = message
                 
                 # Execute actions
-                next_observations, rewards, terminated, truncated, _ = self.env.step(actions)
+                next_observations, rewards, terminated, truncated, info = self.env.step(actions, new_messages)
                 
                 # Update statistics
                 episode_reward += sum(rewards.values())
@@ -170,6 +203,7 @@ class IndependentQLearning:
             
             episode_rewards.append(episode_reward)
             episode_lengths.append(episode_length)
+            successes.append(len(self.env.collected_targets) == self.env.n_targets)
             
             # Store individual agent rewards
             for agent_id, reward in agent_episode_rewards.items():
@@ -187,7 +221,7 @@ class IndependentQLearning:
             "std_reward": np.std(episode_rewards),
             "avg_length": np.mean(episode_lengths),
             "std_length": np.std(episode_lengths),
-            "success_rate": 0.0  # Placeholder for success rate
+            "success_rate": np.mean(successes)
         }
     
     def save_models(self, filepath: str) -> None:

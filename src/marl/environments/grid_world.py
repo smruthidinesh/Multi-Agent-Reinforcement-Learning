@@ -11,7 +11,10 @@ from gymnasium import spaces
 from typing import Dict, List, Tuple, Any, Optional
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import torch
 
+
+from marl.utils.communication import CommunicationChannel
 
 class MultiAgentGridWorld(gym.Env):
     """
@@ -26,33 +29,51 @@ class MultiAgentGridWorld(gym.Env):
         grid_size: Tuple[int, int] = (10, 10),
         n_agents: int = 2,
         n_targets: int = 3,
+        n_goals: int = 0,
         max_steps: int = 100,
         reward_scale: float = 1.0,
         collision_penalty: float = -0.1,
         target_reward: float = 10.0,
+        goal_reward: float = 1.0,
         step_penalty: float = -0.01,
-        render_mode: Optional[str] = None
+        render_mode: Optional[str] = None,
+        message_dim: int = 0
     ):
         super().__init__()
         
         self.grid_size = grid_size
         self.n_agents = n_agents
         self.n_targets = n_targets
+        self.n_goals = n_goals
         self.max_steps = max_steps
         self.reward_scale = reward_scale
         self.collision_penalty = collision_penalty
         self.target_reward = target_reward
+        self.goal_reward = goal_reward
         self.step_penalty = step_penalty
         self.render_mode = render_mode
+        self.message_dim = message_dim
         
         # Action space: 0=up, 1=down, 2=left, 3=right, 4=stay
         self.action_space = spaces.Discrete(5)
         
         # Observation space: agent position + target positions + other agent positions
-        obs_dim = 2 + n_targets * 2 + (n_agents - 1) * 2
+        obs_dim = 2 + n_targets * 2 + (n_agents - 1) * 2 + (n_agents - 1) * message_dim
         self.observation_space = spaces.Box(
             low=0, high=max(grid_size), shape=(obs_dim,), dtype=np.float32
         )
+
+        # Goal space
+        if self.n_goals > 0:
+            self.goal_space = spaces.Discrete(n_goals)
+        else:
+            self.goal_space = None
+        
+        # Communication channel
+        if self.message_dim > 0:
+            self.communication_channel = CommunicationChannel(n_agents, message_dim)
+        else:
+            self.communication_channel = None
         
         # Initialize state
         self.reset()
@@ -72,10 +93,21 @@ class MultiAgentGridWorld(gym.Env):
         for _ in range(self.n_targets):
             pos = self.np_random.integers(0, self.grid_size[0], size=2)
             self.target_positions.append(pos)
+
+        # Initialize goal positions randomly
+        if self.n_goals > 0:
+            self.goal_positions = []
+            for _ in range(self.n_goals):
+                pos = self.np_random.integers(0, self.grid_size[0], size=2)
+                self.goal_positions.append(pos)
         
         # Track collected targets
         self.collected_targets = set()
         self.step_count = 0
+
+        # Reset communication channel
+        if self.communication_channel:
+            self.communication_channel.messages = torch.zeros((self.n_agents, self.message_dim))
         
         # Get initial observations
         observations = self._get_observations()
@@ -83,11 +115,16 @@ class MultiAgentGridWorld(gym.Env):
         
         return observations, info
     
-    def step(self, actions: Dict[int, int]) -> Tuple[Dict, Dict, Dict, Dict, Dict]:
+    def step(self, actions: Dict[int, int], messages: Optional[Dict[int, torch.Tensor]] = None) -> Tuple[Dict, Dict, Dict, Dict, Dict]:
         """Execute one step in the environment."""
         rewards = {}
         terminated = {}
         truncated = {}
+
+        # Send messages
+        if self.communication_channel and messages:
+            for agent_id, message in messages.items():
+                self.communication_channel.send_message(agent_id, message)
         
         # Move agents
         new_positions = []
@@ -142,6 +179,12 @@ class MultiAgentGridWorld(gym.Env):
             if i not in self.collected_targets and np.array_equal(agent_pos, target_pos):
                 self.collected_targets.add(i)
                 reward += self.target_reward
+
+        # Check for goal achievement
+        if self.n_goals > 0:
+            for goal_pos in self.goal_positions:
+                if np.array_equal(agent_pos, goal_pos):
+                    reward += self.goal_reward
         
         # Check for collisions with other agents
         for other_id, other_pos in enumerate(self.agent_positions):
@@ -168,6 +211,11 @@ class MultiAgentGridWorld(gym.Env):
             for other_id, other_pos in enumerate(self.agent_positions):
                 if other_id != agent_id:
                     obs.extend(other_pos)
+
+            # Messages from other agents
+            if self.communication_channel:
+                messages = self.communication_channel.get_messages(agent_id)
+                obs.extend(messages.flatten().tolist())
             
             observations[agent_id] = np.array(obs, dtype=np.float32)
         
@@ -264,6 +312,14 @@ class MultiAgentGridWorld(gym.Env):
         
         plt.close(fig)
         return rgb_array
+    
+    def get_state(self) -> Dict[str, Any]:
+        """Get the current state of the environment for visualization."""
+        return {
+            "grid_size": self.grid_size,
+            "agents": [{"id": i, "pos": pos.tolist()} for i, pos in enumerate(self.agent_positions)],
+            "targets": [{"id": i, "pos": pos.tolist()} for i, pos in enumerate(self.target_positions) if i not in self.collected_targets],
+        }
     
     def close(self):
         """Close the environment."""

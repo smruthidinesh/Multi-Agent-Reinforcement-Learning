@@ -126,22 +126,46 @@ env = CooperativeNavigation(
 
 A competitive environment where predators try to catch prey while prey try to escape.
 
+### 4. Traffic
+
+A simple multi-agent traffic environment where agents must navigate to their goals while avoiding collisions.
+
 ```python
-env = PredatorPrey(
-    n_predators=2,          # Number of predators
-    n_prey=1,               # Number of prey
-    world_size=2.0,         # World size
-    max_steps=100,          # Maximum steps per episode
-    capture_reward=10.0,    # Reward for capturing prey
-    escape_reward=1.0       # Reward for escaping
+env = TrafficEnv(
+    n_agents=2,             # Number of agents
+    grid_size=10,           # Grid dimensions
 )
 ```
 
 **Features:**
-- Continuous action space
-- Competitive objectives
-- Asymmetric roles
-- Dynamic prey behavior
+- Discrete action space
+- Cooperative objectives
+- Collision avoidance
+
+### 5. Robotics (Multi-Agent Robot Navigation)
+
+A 2D environment where multiple robotic agents navigate to target locations while avoiding obstacles and collisions.
+
+```python
+from marl.environments import MultiAgentRobotNavigation
+
+env = MultiAgentRobotNavigation(
+    n_agents=2,             # Number of agents
+    grid_size=10,           # Grid dimensions (e.g., 10x10)
+    n_targets=2,            # Number of target locations
+    n_obstacles=3,          # Number of static obstacles
+    max_steps=100,          # Maximum steps per episode
+    target_reward=10.0,     # Reward for reaching a target
+    collision_penalty=-5.0, # Penalty for collisions with obstacles or other agents
+    step_penalty=-0.1       # Penalty per step to encourage efficiency
+)
+```
+
+**Features:**
+- Continuous observation space (positions, velocities)
+- Discrete action space (move forward, turn left, turn right, stay)
+- Collision avoidance
+- Cooperative objectives (all agents reach targets)
 
 ## Algorithms
 
@@ -195,24 +219,24 @@ algorithm = MADDPG(
 
 Proximal Policy Optimization adapted for multi-agent settings.
 
+### 4. QMIX
+
+QMIX is a value-based algorithm that learns a monotonic value function factorization.
+
 ```python
-algorithm = MAPPO(
+algorithm = QMix(
     env=env,
     n_agents=2,
     state_dim=state_dim,
     action_dim=action_dim,
-    learning_rate=0.001,
-    gamma=0.99,
-    lambda_gae=0.95,
-    clip_ratio=0.2
+    mixing_embed_dim=32
 )
 ```
 
 **Features:**
-- Policy gradient method
-- Proximal policy optimization
-- Generalized advantage estimation
-- Stable learning
+- Value function factorization
+- Centralized training
+- Decentralized execution
 
 ## Agents
 
@@ -253,16 +277,35 @@ agent = PolicyGradientAgent(
 
 Actor-critic agent with separate networks for policy and value function.
 
-```python
-from marl.agents import ActorCriticAgent
+## Hierarchical Multi-Agent Systems
 
-agent = ActorCriticAgent(
+The framework now supports hierarchical multi-agent systems, where a high-level policy can set goals for low-level policies.
+
+```python
+# Create a hierarchical agent
+agent = HierarchicalAgent(
     agent_id=0,
     observation_space=env.observation_space,
     action_space=env.action_space,
-    learning_rate=0.001,
-    gamma=0.99
+    high_level_policy=high_level_policy,
+    low_level_policy=low_level_policy
 )
+```
+
+## Communication
+
+Agents can communicate with each other by sending and receiving messages. The messages are added to the agents' observations.
+
+```python
+# Enable communication in the environment
+env = MultiAgentGridWorld(
+    n_agents=2,
+    message_dim=4
+)
+
+# Agents can now send and receive messages
+agent.send_message(torch.randn(4))
+messages = agent.get_messages()
 ```
 
 ## Visualization
@@ -285,6 +328,14 @@ TrainingPlots.plot_learning_curves(
 from marl.utils import EvaluationUtils
 
 EvaluationUtils.plot_evaluation_results(eval_results)
+```
+
+### Web-based Visualization
+
+A web-based visualization interface is available for real-time monitoring of the environment.
+
+```bash
+python examples/web_visualization_demo.py
 ```
 
 ## Examples
@@ -415,12 +466,3 @@ If you use this framework in your research, please cite:
 - Read the documentation
 - Open an issue on GitHub
 - Check the troubleshooting section
-
-## Future Work
-
-- [ ] Add more environments (traffic, robotics, etc.)
-- [ ] Implement additional algorithms (QMIX, VDN, etc.)
-- [ ] Add communication between agents
-- [ ] Support for hierarchical multi-agent systems
-- [ ] Web-based visualization interface
-- [ ] Distributed training support

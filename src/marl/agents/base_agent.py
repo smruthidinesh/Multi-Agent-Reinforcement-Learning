@@ -24,13 +24,17 @@ class BaseAgent(ABC):
         observation_space: Any,
         action_space: Any,
         learning_rate: float = 0.001,
-        device: str = "cpu"
+        device: str = "cpu",
+        communication_channel: Optional[Any] = None,
+        message_dim: int = 0
     ):
         self.agent_id = agent_id
         self.observation_space = observation_space
         self.action_space = action_space
         self.learning_rate = learning_rate
         self.device = device
+        self.communication_channel = communication_channel
+        self.message_dim = message_dim
         
         # Training statistics
         self.episode_rewards = []
@@ -38,18 +42,28 @@ class BaseAgent(ABC):
         self.training_steps = 0
         
     @abstractmethod
-    def select_action(self, observation: np.ndarray, training: bool = True) -> int:
+    def get_action(self, observation: np.ndarray, messages: Optional[torch.Tensor] = None, training: bool = True) -> int:
         """
-        Select an action given an observation.
+        Select an action given an observation and optional messages.
         
         Args:
             observation: Current observation
+            messages: Messages from other agents
             training: Whether the agent is in training mode
             
         Returns:
             Selected action
         """
         pass
+    
+    def send_message(self, message: torch.Tensor):
+        if self.communication_channel:
+            self.communication_channel.send_message(self.agent_id, message)
+
+    def get_messages(self) -> Optional[torch.Tensor]:
+        if self.communication_channel:
+            return self.communication_channel.get_messages(self.agent_id)
+        return None
     
     @abstractmethod
     def update(self, batch: Dict[str, Any]) -> Dict[str, float]:

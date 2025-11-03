@@ -87,7 +87,7 @@ class TestMultiAgentRL(unittest.TestCase):
         agent = self.algorithm.agents[0]
         observation = np.random.random(agent.observation_space.shape[0])
         
-        action = agent.select_action(observation, training=True)
+        action = agent.get_action(observation, training=True)
         self.assertIsInstance(action, int)
         self.assertGreaterEqual(action, 0)
         self.assertLess(action, agent.action_space.n)
