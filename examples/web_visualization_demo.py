@@ -1,4 +1,10 @@
 
+import sys
+from pathlib import Path
+
+# Add src to path
+sys.path.append(str(Path(__file__).parent.parent / "src"))
+
 from marl.environments.grid_world import MultiAgentGridWorld
 from marl.visualization import run_web_server
 import threading

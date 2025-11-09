@@ -2,8 +2,16 @@
 from flask import Flask, render_template, jsonify
 import threading
 import time
+from pathlib import Path
 
-app = Flask(__name__)
+# Get the absolute path to the directory containing this script
+current_dir = Path(__file__).parent
+
+app = Flask(
+    __name__,
+    template_folder=current_dir / "templates",
+    static_folder=current_dir / "static"
+)
 
 env_state = {}
 
