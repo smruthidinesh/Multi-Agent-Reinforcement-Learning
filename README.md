@@ -2,14 +2,45 @@
 
 A comprehensive Python framework for implementing and experimenting with multi-agent reinforcement learning (MARL) algorithms and environments.
 
+## ✨ New Advanced Features
+
+This framework now includes **state-of-the-art** multi-agent RL techniques from top-tier research:
+
+### 🎯 Attention-based Communication (TarMAC)
+- **Learned, targeted communication** between agents
+- Multi-head attention for selective message processing
+- Gated integration of communicated information
+- **Reference**: Das et al., ICML 2019
+
+### 🕸️ Graph Neural Networks (GNN)
+- **Scalable coordination** for 100+ agents
+- Dynamic graph construction based on agent proximity
+- Graph Attention Networks (GAT), GCN, and MPNN implementations
+- **Reference**: Veličković et al., ICLR 2018
+
+### 🧠 Recurrent Policies (LSTM)
+- **Memory-based agents** for partial observability
+- Handle POMDPs and temporal dependencies
+- Sequence-based training with experience replay
+- **Reference**: Hausknecht & Stone, AAAI 2015
+
+### 🔍 Intrinsic Curiosity Module (ICM)
+- **Exploration bonuses** for sparse reward environments
+- Prediction-based curiosity and novelty detection
+- Random Network Distillation (RND) and count-based exploration
+- **Reference**: Pathak et al., ICML 2017
+
 ## Features
 
-- **Multiple Environments**: Grid World, Cooperative Navigation, Predator-Prey
-- **Various Algorithms**: Independent Q-Learning, MADDPG, MAPPO
-- **Flexible Agent Types**: DQN, Policy Gradient, Actor-Critic
-- **Comprehensive Visualization**: Training plots, evaluation metrics, agent behavior analysis
+- **Multiple Environments**: Grid World, Cooperative Navigation, Predator-Prey, Traffic, Robotics
+- **Various Algorithms**: Independent Q-Learning, MADDPG, MAPPO, QMix
+- **Flexible Agent Types**: DQN, Policy Gradient, Actor-Critic, **Attention DQN**, **GNN DQN**, **LSTM DQN**
+- **Advanced Communication**: TarMAC, CommNet, Graph-based message passing
+- **Exploration Mechanisms**: ICM, RND, count-based bonuses
+- **Comprehensive Visualization**: Training plots, evaluation metrics, attention weights, graph structures
 - **Easy-to-use Interface**: Command-line tools and Python API
 - **Extensible Design**: Easy to add new environments, algorithms, and agents
+- **Research-Ready**: Implements latest ICML/NeurIPS/ICLR papers
 
 ## Installation
 
@@ -240,7 +271,7 @@ algorithm = QMix(
 
 ## Agents
 
-### 1. DQN Agent
+### 1. DQN Agent (Baseline)
 
 Deep Q-Network agent with experience replay and target networks.
 
@@ -256,6 +287,101 @@ agent = DQNAgent(
     epsilon=1.0
 )
 ```
+
+### 2. Attention DQN Agent (TarMAC) ⭐ NEW
+
+DQN with attention-based communication for coordinated decision-making.
+
+```python
+from marl.agents import AttentionDQNAgent
+
+agent = AttentionDQNAgent(
+    agent_id=0,
+    observation_space=env.observation_space,
+    action_space=env.action_space,
+    message_dim=64,           # Communication message size
+    num_heads=4,              # Number of attention heads
+    use_communication=True,
+    device="cuda"
+)
+
+# Get action and generate message
+action, message = agent.get_action(
+    observation=obs,
+    other_messages=other_agent_messages,
+    training=True
+)
+```
+
+**Key Features**:
+- Learned message generation from observations
+- Multi-head attention over other agents' messages
+- Gated integration of communication
+- Suitable for 3-20 agents
+
+### 3. GNN DQN Agent ⭐ NEW
+
+DQN with Graph Neural Networks for scalable multi-agent coordination.
+
+```python
+from marl.agents import GNNDQNAgent
+
+agent = GNNDQNAgent(
+    agent_id=0,
+    observation_space=env.observation_space,
+    action_space=env.action_space,
+    n_agents=100,             # Scales to many agents
+    gnn_type="gat",           # GAT, GCN, or MPNN
+    num_gnn_layers=3,
+    num_heads=4,
+    k_neighbors=5,            # k-NN graph construction
+    device="cuda"
+)
+
+# Get action with graph-based coordination
+action = agent.get_action(
+    observation=obs,
+    all_observations=all_agent_obs,
+    positions=agent_positions,
+    training=True
+)
+```
+
+**Key Features**:
+- Dynamic graph construction based on proximity
+- Message passing on agent graphs
+- Scales to 100+ agents efficiently
+- Graph Attention, GCN, or MPNN architectures
+
+### 4. LSTM DQN Agent ⭐ NEW
+
+DQN with LSTM memory for partially observable environments.
+
+```python
+from marl.agents import LSTMDQNAgent
+
+agent = LSTMDQNAgent(
+    agent_id=0,
+    observation_space=env.observation_space,
+    action_space=env.action_space,
+    lstm_hidden_dim=128,
+    num_lstm_layers=1,
+    sequence_length=8,        # Training sequence length
+    device="cuda"
+)
+
+# Reset hidden state at episode start
+agent.reset_episode()
+
+# Get action (hidden state persists across steps)
+action = agent.get_action(observation, training=True)
+```
+
+**Key Features**:
+- LSTM memory for temporal reasoning
+- Handles partial observability (POMDPs)
+- Sequence-based training
+- Remembers past observations
 
 ### 2. Policy Gradient Agent
 
@@ -292,21 +418,87 @@ agent = HierarchicalAgent(
 )
 ```
 
-## Communication
+## Advanced Communication
 
-Agents can communicate with each other by sending and receiving messages. The messages are added to the agents' observations.
+### TarMAC (Targeted Multi-Agent Communication) ⭐ NEW
+
+Learned, attention-based communication where agents decide what and when to communicate.
 
 ```python
-# Enable communication in the environment
-env = MultiAgentGridWorld(
-    n_agents=2,
-    message_dim=4
+from marl.agents import AttentionDQNAgent
+
+# Create agents with TarMAC
+agents = [
+    AttentionDQNAgent(
+        agent_id=i,
+        observation_space=env.observation_space,
+        action_space=env.action_space,
+        message_dim=64,
+        num_heads=4,
+        use_communication=True
+    )
+    for i in range(n_agents)
+]
+
+# Training loop with communication
+obs, _ = env.reset()
+messages = {i: None for i in range(n_agents)}
+
+for step in range(max_steps):
+    actions = {}
+    new_messages = {}
+
+    for i, agent in enumerate(agents):
+        # Collect messages from other agents
+        other_msgs = [messages[j] for j in range(n_agents) if j != i]
+        other_msgs_tensor = torch.stack(other_msgs) if other_msgs else None
+
+        # Get action and generate message
+        action, message = agent.get_action(obs[i], other_msgs_tensor)
+        actions[i] = action
+        new_messages[i] = message
+
+    messages = new_messages
+    obs, rewards, dones, _, _ = env.step(actions)
+```
+
+## Intrinsic Curiosity & Exploration ⭐ NEW
+
+Enhance exploration in sparse reward environments with intrinsic motivation.
+
+```python
+from marl.utils.curiosity import IntrinsicCuriosityModule
+
+# Create ICM module
+icm = IntrinsicCuriosityModule(
+    obs_dim=env.observation_space.shape[0],
+    action_dim=env.action_space.n,
+    feature_dim=64,
+    beta=0.2,    # Inverse model loss weight
+    eta=0.5      # Intrinsic reward scale
 )
 
-# Agents can now send and receive messages
-agent.send_message(torch.randn(4))
-messages = agent.get_messages()
+# During training
+obs_tensor = torch.FloatTensor(obs)
+next_obs_tensor = torch.FloatTensor(next_obs)
+action_tensor = torch.LongTensor([action])
+
+# Compute intrinsic reward
+intrinsic_reward, losses = icm(obs_tensor, next_obs_tensor, action_tensor)
+
+# Augment environment reward
+total_reward = env_reward + intrinsic_reward
+
+# Update ICM
+icm_optimizer.zero_grad()
+losses['icm_loss'].backward()
+icm_optimizer.step()
 ```
+
+**Available Curiosity Methods**:
+- **ICM (Intrinsic Curiosity Module)**: Prediction error as curiosity
+- **RND (Random Network Distillation)**: Novelty detection
+- **Count-based**: Exploration bonus for rare states
 
 ## Visualization
 
@@ -400,20 +592,72 @@ algorithm:
   algorithm_type: "independent_q_learning"
 ```
 
+## Advanced Features Quick Start
+
+### 🚀 Try the Demo Notebook
+
+```bash
+jupyter notebook notebooks/advanced_features_demo.ipynb
+```
+
+The notebook includes:
+- Interactive demos of all advanced features
+- Visualization of attention weights and graph structures
+- Performance comparisons
+- Code examples ready to run
+
+### 📚 Learn More
+
+- **[Advanced Features Documentation](docs/advanced_features.md)** - Detailed technical guide
+- **[Getting Started Guide](docs/getting_started.md)** - Beginner-friendly tutorial
+- **[API Reference](docs/api_reference.md)** - Complete API documentation
+
+### 🔬 Research Papers Implemented
+
+This framework implements algorithms from top-tier research venues:
+
+1. **Das, A., et al.** (2019). "TarMAC: Targeted Multi-Agent Communication." *ICML*.
+2. **Veličković, P., et al.** (2018). "Graph Attention Networks." *ICLR*.
+3. **Pathak, D., et al.** (2017). "Curiosity-driven Exploration by Self-supervised Prediction." *ICML*.
+4. **Hausknecht, M., & Stone, P.** (2015). "Deep Recurrent Q-Learning for Partially Observable MDPs." *AAAI*.
+5. **Burda, Y., et al.** (2019). "Exploration by Random Network Distillation." *ICLR*.
+6. **Rashid, T., et al.** (2018). "QMIX: Monotonic Value Function Factorisation for Decentralised Multi-Agent Reinforcement Learning." *ICML*.
+7. **Lowe, R., et al.** (2017). "Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments." *NeurIPS*.
+
+### 🎯 Use Cases
+
+**Choose the right agent for your task:**
+
+| Task Type | Recommended Agent | Why? |
+|-----------|------------------|------|
+| Coordination with communication | AttentionDQN | Learned selective communication |
+| Large-scale systems (50+ agents) | GNNDQN | Graph-based scalability |
+| Partial observability | LSTMDQN | Memory of past observations |
+| Sparse rewards | Any agent + ICM | Exploration bonus |
+| Real-time systems | DQN or GNN | Low latency |
+
 ## Project Structure
 
 ```
 multi_agent_rl/
 ├── src/marl/
 │   ├── environments/          # Environment implementations
-│   ├── agents/                # Agent implementations
+│   ├── agents/                # Agent implementations (⭐ new agents)
+│   │   ├── attention_dqn_agent.py  # TarMAC communication
+│   │   ├── gnn_dqn_agent.py        # Graph Neural Networks
+│   │   └── lstm_dqn_agent.py       # Recurrent policies
 │   ├── algorithms/            # MARL algorithm implementations
-│   ├── utils/                 # Utility functions
+│   ├── utils/                 # Utility functions (⭐ new modules)
+│   │   ├── attention.py            # Attention mechanisms
+│   │   ├── graph_networks.py       # GNN implementations
+│   │   └── curiosity.py            # ICM, RND, exploration
 │   └── visualization/         # Visualization tools
 ├── examples/                  # Example scripts
 ├── notebooks/                  # Jupyter notebooks
+│   └── advanced_features_demo.ipynb  # ⭐ NEW: Interactive demo
 ├── tests/                     # Unit tests
 ├── docs/                      # Documentation
+│   └── advanced_features.md   # ⭐ NEW: Technical documentation
 ├── train.py                   # Training script
 ├── evaluate.py               # Evaluation script
 ├── requirements.txt          # Dependencies
