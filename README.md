@@ -46,10 +46,12 @@ This framework now includes **state-of-the-art** multi-agent RL techniques from 
 
 ### Prerequisites
 
-- Python 3.8+
+- **Python 3.8+** (✅ **Fully compatible with Python 3.11.9** - recommended)
 - PyTorch 2.0+
 - NumPy, Matplotlib, Seaborn
 - Gymnasium (OpenAI Gym)
+
+> **Note**: This project is tested and fully compatible with Python 3.11.9. See [PYTHON_3.11.9_COMPATIBILITY.md](PYTHON_3.11.9_COMPATIBILITY.md) for details.
 
 ### Install Dependencies
 
