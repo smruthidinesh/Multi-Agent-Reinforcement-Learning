@@ -1,0 +1,11 @@
+.git/
+.vscode/
+docs/
+examples/
+notebooks/
+tests/
+results/
+evaluation_results/
+**/__pycache__/
+*.md
+requirements-ml.txt
