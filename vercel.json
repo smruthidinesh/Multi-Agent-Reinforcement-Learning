@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "src/marl/visualization/web_server.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/marl/visualization/web_server.py"
+    }
+  ]
+}
