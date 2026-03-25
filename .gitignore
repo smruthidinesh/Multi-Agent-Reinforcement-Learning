@@ -152,6 +152,5 @@ runs/
 data/
 datasets/
 *.csv
-*.json
 *.npy
 *.npz
