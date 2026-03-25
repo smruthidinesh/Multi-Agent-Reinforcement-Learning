@@ -2,7 +2,6 @@
   "version": 2,
   "functions": {
     "api/index.py": {
-      "runtime": "@vercel/python",
       "excludeFiles": "{results/**,evaluation_results/**,notebooks/**,docs/**,tests/**,examples/**,**/__pycache__/**,*.md}"
     }
   },
